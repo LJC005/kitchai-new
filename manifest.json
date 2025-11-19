@@ -1,0 +1,21 @@
+{
+    "name": "KitchAI - Family Meal Planner",
+    "short_name": "KitchAI",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#F2F2F7",
+    "theme_color": "#F2F2F7",
+    "description": "Smart family meal planning and recipe management.",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/3565/3565418.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/3565/3565418.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

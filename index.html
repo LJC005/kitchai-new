@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>KitchAI - Family Meal Planner</title>
+    
+    <!-- PWA Manifest & Meta -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#F2F2F7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KitchAI">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3565/3565418.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        /* iOS-like Base Styles */
+        body { background-color: #F2F2F7; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #000000; -webkit-tap-highlight-color: transparent; padding-bottom: 6rem; padding-top: env(safe-area-inset-top); }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 0.5px solid rgba(0, 0, 0, 0.1); }
+        ::-webkit-scrollbar { width: 0px; background: transparent; } html { scroll-behavior: smooth; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes spin { to { transform: rotate(360deg); } } .animate-spin-custom { animation: spin 1s linear infinite; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } } .mic-active { animation: pulse-red 2s infinite; border-color: #ef4444 !important; color: #ef4444 !important; background-color: #fee2e2 !important; }
+        .ios-input { background-color: #E5E5EA; border: none; border-radius: 10px; padding: 10px 12px; font-size: 17px; width: 100%; transition: background-color 0.2s; } .ios-input:focus { background-color: #D1D1D6; outline: none; }
+        .ios-card { background-color: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); transition: transform 0.2s ease, box-shadow 0.2s ease; contain: content; }
+        .cooking-step-container { transition: all 0.3s ease; border-left: 3px solid transparent; } .cooking-step-container.active { border-left-color: #007AFF; background-color: #F2F8FF; }
+        .step-check:checked + div label { text-decoration: line-through; color: #8E8E93; } .step-check:checked + div { opacity: 0.6; }
+        #ai-chat-history .glass .prose { color: #1f2937 !important; }
+        .chat-bubble-user { background-color: #007AFF; color: white; border-radius: 18px 18px 4px 18px; } .chat-bubble-ai { background-color: #E5E5EA; color: black; border-radius: 18px 18px 18px 4px; } .chat-action-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-top: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .prose p { margin-bottom: 0.5em; } .prose ul { list-style-type: disc; padding-left: 1.2em; margin-bottom: 0.5em; } .prose ol { list-style-type: decimal; padding-left: 1.2em; margin-bottom: 0.5em; } .prose strong { font-weight: 700; }
+        .tag-allergy { @apply bg-red-100 text-red-700 border-red-200; } .tag-restriction { @apply bg-orange-100 text-orange-700 border-orange-200; } .tag-dislike { @apply bg-yellow-100 text-yellow-700 border-yellow-200; }
+        .today-card { border: 2px solid #F59E0B; position: relative; transform: scale(1.02); box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.15); z-index: 10; } .today-badge { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3); }
+        .toggle-checkbox:checked { right: 0; border-color: #3b82f6; } .toggle-checkbox:checked + .toggle-label { background-color: #3b82f6; }
+        details > summary { list-style: none; } details > summary::-webkit-details-marker { display: none; } details[open] summary ~ * { animation: fadeIn 0.3s ease-in-out; }
+        .detail-pill { @apply bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold flex items-center whitespace-nowrap; }
+        #offline-banner { transition: transform 0.3s ease-in-out; transform: translateY(-100%); } #offline-banner.visible { transform: translateY(0); }
+        .loading-spinner { border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 2px solid white; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+        
+        /* Toast */
+        #toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; gap: 10px; pointer-events: none; width: 90%; max-width: 400px; }
+        .toast { background: rgba(0,0,0,0.85); color: white; padding: 12px 20px; border-radius: 50px; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; animation: slideUpFade 0.3s ease-out forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes slideUpFade { to { opacity: 1; transform: translateY(0); } }
+
+        /* Print Styles */
+        @media print {
+            body { background: white; padding: 0; overflow: visible; }
+            .no-print, header, nav, #toast-container { display: none !important; }
+            #view-shopping { display: block !important; }
+            #shopping-list-container { box-shadow: none; border: none; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Offline Banner -->
+    <div id="offline-banner" class="fixed top-0 left-0 w-full bg-yellow-500 text-white text-center text-xs font-bold py-2 z-[60] shadow-md">
+        You are offline. Changes will save when reconnected.
+    </div>
+
+    <!-- iOS Header -->
+    <header class="glass sticky top-0 z-40 transition-all duration-300" id="main-header">
+        <div class="max-w-3xl mx-auto px-4 h-12 flex items-center justify-center relative">
+            <h1 class="text-[17px] font-semibold text-black">KitchAI</h1>
+            <div id="connection-status" class="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-gray-300"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow w-full max-w-3xl mx-auto px-4 py-4 relative">
+        <!-- Planner View -->
+        <div id="view-planner" class="space-y-8 animate-fade-in pb-10">
+            <div id="planner-today-section" class="rounded-3xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-600 to-purple-700 text-white relative">
+                <!-- Content injected via JS -->
+            </div>
+            <div class="flex flex-col gap-4 sticky top-14 z-30 bg-[#F2F2F7]/95 backdrop-blur-sm py-2">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold tracking-tight text-gray-900">Weekly Plan</h2>
+                    <button id="btn-export-ical" onclick="app.exportMealPlanICal()" class="text-blue-500 font-medium text-[13px] bg-blue-50 px-3 py-1.5 rounded-full flex items-center transition-all hover:bg-blue-100"><i data-lucide="calendar-days" class="w-4 h-4 mr-1.5"></i> Sync Cal</button>
+                </div>
+                <div class="bg-[#E5E5EA] p-0.5 rounded-lg flex text-[13px] font-medium h-8">
+                    <button onclick="app.setWeekOffset(0)" id="btn-this-week" class="flex-1 rounded-md bg-white shadow-sm text-black transition-all">This Week</button>
+                    <button onclick="app.setWeekOffset(1)" id="btn-next-week" class="flex-1 rounded-md text-gray-500 active:bg-white/50 transition-all">Next Week</button>
+                </div>
+            </div>
+            <div id="planner-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- Jump To Today Floating Button -->
+        <button id="btn-jump-today" onclick="app.scrollToToday()" class="fixed bottom-24 right-6 z-50 bg-white text-blue-600 p-3 rounded-full shadow-xl border border-blue-100 hidden transition-transform hover:scale-110 active:scale-95 flex items-center gap-2 font-bold text-sm">
+            <i data-lucide="arrow-up" class="w-4 h-4"></i> Today
+        </button>
+        
+        <!-- AI Suggestions View -->
+        <div id="view-suggestions" class="hidden space-y-6 animate-fade-in">
+             <div class="flex justify-between items-end mb-2">
+                <h2 class="text-3xl font-bold tracking-tight">AI Ideas</h2>
+                <button onclick="app.generateAiSuggestions()" id="btn-gen-ideas" class="text-purple-600 bg-purple-50 px-4 py-2 rounded-xl text-[15px] font-medium active:opacity-50 flex items-center transition-all">
+                    <i data-lucide="sparkles" class="w-5 h-5 mr-1.5"></i> Generate 5
+                </button>
+            </div>
+            <p class="text-sm text-gray-500">These ideas are temporary. Add them to your planner or save them to your book.</p>
+            <div id="suggestions-grid" class="grid grid-cols-1 gap-4"></div>
+        </div>
+
+        <!-- Recipe Book View -->
+        <div id="view-recipes" class="hidden space-y-4 animate-fade-in">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-3xl font-bold tracking-tight">Recipes</h2>
+                <div class="flex gap-2">
+                    <button onclick="app.openImportModal()" class="text-gray-500 text-[13px] bg-gray-200 px-3 py-1 rounded-lg font-medium flex items-center"><i data-lucide="download" class="w-4 h-4 mr-1"></i> Import</button>
+                    <button onclick="app.openRecipeModal()" class="text-blue-500 text-[17px] font-medium active:opacity-50"><i data-lucide="plus" class="w-6 h-6"></i></button>
+                </div>
+            </div>
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4"></i>
+                <input type="text" id="recipe-search" placeholder="Search" class="ios-input pl-9">
+                <div id="search-loading" class="absolute right-3 top-1/2 -translate-y-1/2 hidden"><div class="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div></div>
+            </div>
+            <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-gray-100">
+                <span class="text-sm font-medium text-gray-600">Show Temporary Recipes</span>
+                <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="toggle" id="toggle-temp-recipes" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer" onclick="app.renderRecipes()"/>
+                    <label for="toggle-temp-recipes" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                </div>
+            </div>
+            <button onclick="app.openAiRecipeModal()" class="w-full bg-purple-50 text-purple-600 py-3 rounded-xl text-[17px] font-semibold active:bg-purple-100 transition flex items-center justify-center">
+                <i data-lucide="bot" class="w-5 h-5 mr-2"></i> Create with AI
+            </button>
+            <div id="recipes-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            <div id="recipes-observer-target" class="h-10"></div>
+        </div>
+
+        <!-- Shopping List View -->
+        <div id="view-shopping" class="hidden space-y-4 animate-fade-in">
+            <div class="flex justify-between items-end mb-2 no-print">
+                <h2 class="text-3xl font-bold tracking-tight">Shopping</h2>
+                <div class="flex gap-3">
+                     <button onclick="app.printShoppingList()" class="text-gray-500"><i data-lucide="printer" class="w-6 h-6"></i></button>
+                     <button onclick="app.shareShoppingList()" class="text-blue-500"><i data-lucide="share" class="w-6 h-6"></i></button>
+                </div>
+            </div>
+            
+            <!-- Smart Controls -->
+            <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 no-print">
+                 <div class="flex items-center gap-2">
+                    <input type="checkbox" id="include-staples" class="w-5 h-5 rounded text-blue-600" onchange="app.renderShopping()">
+                    <label for="include-staples" class="text-sm font-medium text-gray-700">Include Staples</label>
+                 </div>
+                 <button onclick="app.estimatePrice()" class="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-lg flex items-center">
+                    <i data-lucide="dollar-sign" class="w-3 h-3 mr-1"></i> Estimate
+                 </button>
+            </div>
+
+            <!-- Voice Shopping -->
+            <div class="relative no-print">
+                 <button onclick="app.toggleVoiceShopping()" id="btn-voice-shop" class="w-full bg-blue-50 text-blue-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2">
+                    <i data-lucide="mic" class="w-5 h-5"></i> Check off items
+                 </button>
+            </div>
+            
+            <div id="shopping-list-container" class="bg-white rounded-2xl shadow-sm p-4 min-h-[300px]"></div>
+            <div id="price-estimate-display" class="text-center text-sm font-bold text-gray-500 mt-2 hidden"></div>
+        </div>
+
+        <!-- Family Settings View -->
+        <div id="view-family" class="hidden space-y-6 animate-fade-in">
+            <div class="flex justify-between items-end mb-2">
+                <h2 class="text-3xl font-bold tracking-tight">Family</h2>
+                <div class="flex gap-2">
+                    <button onclick="app.exportData()" class="text-gray-500 text-[13px] bg-gray-200 px-3 py-1 rounded-lg font-medium flex items-center"><i data-lucide="download" class="w-4 h-4 mr-1"></i> Backup</button>
+                    <button onclick="app.openFamilyModal()" class="text-blue-500 text-[17px] font-medium active:opacity-50"><i data-lucide="plus" class="w-6 h-6"></i></button>
+                </div>
+            </div>
+            <!-- Pantry Manager -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-3 flex items-center"><i data-lucide="package" class="w-5 h-5 mr-2 text-orange-500"></i> Pantry Staples</h3>
+                <p class="text-xs text-gray-500 mb-3">Items excluded from shopping list unless overridden.</p>
+                <div id="pantry-staples-list" class="flex flex-wrap gap-2 mb-3"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="new-staple" placeholder="Add staple (e.g. Salt)" class="ios-input text-sm py-2">
+                    <button onclick="app.addStaple()" class="bg-orange-100 text-orange-600 px-4 rounded-lg font-bold">+</button>
+                </div>
+            </div>
+
+            <!-- Store Layout -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-lg mb-3 flex items-center"><i data-lucide="map" class="w-5 h-5 mr-2 text-blue-500"></i> Store Layout</h3>
+                <p class="text-xs text-gray-500 mb-3">Drag to match your store's aisle order.</p>
+                <ul id="store-layout-list" class="space-y-2">
+                    <!-- Categories injected here -->
+                </ul>
+            </div>
+            
+            <h3 class="font-bold text-lg mt-6">Members</h3>
+            <div id="family-grid" class="grid grid-cols-1 gap-4"></div>
+        </div>
+
+        <!-- AI Chat View -->
+        <div id="view-ai-chat" class="hidden flex flex-col h-[calc(100vh-8rem)] animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold tracking-tight">Assistant</h2>
+                <div class="flex gap-2">
+                     <button onclick="app.toggleChatVoice()" id="btn-chat-voice-toggle" class="p-2 rounded-full bg-gray-200 text-gray-600"><i data-lucide="volume-2" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+            <div class="flex-grow bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col relative">
+                <div id="chat-history" class="flex-grow overflow-y-auto p-4 space-y-4 bg-[#F2F2F7]">
+                    <div class="flex gap-3">
+                        <div class="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] text-[17px]">
+                            <p class="text-gray-900">Hello! I'm KitchAI. I know your family's preferences. What shall we cook?</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-white border-t border-gray-200">
+                    <form onsubmit="app.handleChatSubmit(event)" class="flex gap-2 items-center">
+                        <button type="button" id="btn-chat-mic" onclick="app.toggleChatMic()" class="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"><i data-lucide="mic" class="w-5 h-5"></i></button>
+                        <input type="text" id="chat-input" placeholder="Ask anything..." class="ios-input rounded-full px-4">
+                        <button type="submit" id="btn-chat-send" class="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-md active:scale-90 transition">
+                            <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- iOS Bottom Navigation -->
+    <nav class="glass fixed bottom-0 w-full z-50 pb-safe pt-1 no-print">
+        <div class="flex justify-around items-center h-14">
+            <button onclick="app.setView('planner')" class="nav-btn flex flex-col items-center justify-center w-full h-full active:opacity-50" data-target="planner"><i data-lucide="calendar" class="w-6 h-6 mb-0.5"></i><span class="text-[10px] font-medium">Planner</span></button>
+            <button onclick="app.setView('suggestions')" class="nav-btn flex flex-col items-center justify-center w-full h-full active:opacity-50 text-gray-400" data-target="suggestions"><i data-lucide="lightbulb" class="w-6 h-6 mb-0.5"></i><span class="text-[10px] font-medium">Ideas</span></button>
+            <button onclick="app.setView('recipes')" class="nav-btn flex flex-col items-center justify-center w-full h-full active:opacity-50 text-gray-400" data-target="recipes"><i data-lucide="book-open" class="w-6 h-6 mb-0.5"></i><span class="text-[10px] font-medium">Recipes</span></button>
+            <button onclick="app.setView('shopping')" class="nav-btn flex flex-col items-center justify-center w-full h-full active:opacity-50 text-gray-400" data-target="shopping"><i data-lucide="shopping-bag" class="w-6 h-6 mb-0.5"></i><span class="text-[10px] font-medium">Shop</span></button>
+            <button onclick="app.setView('family')" class="nav-btn flex flex-col items-center justify-center w-full h-full active:opacity-50 text-gray-400" data-target="family"><i data-lucide="users" class="w-6 h-6 mb-0.5"></i><span class="text-[10px] font-medium">Family</span></button>
+        </div>
+    </nav>
+
+    <!-- Error Boundary Modal -->
+    <div id="modal-error-boundary" class="fixed inset-0 z-[99] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative z-10 text-center">
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold mb-2">Something went wrong</h3>
+            <p class="text-gray-600 mb-6 text-sm">We encountered an unexpected error. Please try reloading the app.</p>
+            <button onclick="window.location.reload()" class="w-full bg-red-600 text-white h-12 rounded-xl font-bold">Reload App</button>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Recipe Detail Modal -->
+    <div id="modal-recipe-detail" class="fixed inset-0 z-[65] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onclick="app.closeModal('modal-recipe-detail')"></div><div class="bg-white w-full sm:w-[600px] h-[95vh] sm:h-[85vh] sm:rounded-2xl rounded-t-3xl shadow-2xl transform transition-transform duration-300 flex flex-col animate-slide-up overflow-hidden relative"><div class="p-4 border-b border-gray-100 bg-white/90 backdrop-blur-md z-10 flex justify-between items-center sticky top-0"><button onclick="app.closeModal('modal-recipe-detail')" class="flex items-center text-blue-600 font-medium text-[17px]"><i data-lucide="chevron-left" class="w-6 h-6 -ml-2"></i> Back</button><div class="flex gap-4"><button onclick="app.exportRecipePDF()" class="text-gray-500" title="Export PDF"><i data-lucide="download" class="w-6 h-6"></i></button><button onclick="app.toggleEditMode()" class="text-gray-500"><i data-lucide="settings" class="w-6 h-6"></i></button></div></div><div class="flex-grow overflow-y-auto pb-24" id="detail-content"></div><div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 pb-safe"><button id="btn-detail-plan" class="w-full bg-green-600 text-white h-14 rounded-2xl font-bold text-lg shadow-lg shadow-green-200 flex items-center justify-center active:scale-95 transition">Plan for Today</button></div></div></div>
+    
+    <!-- Add To Planner Modal -->
+    <div id="modal-add-plan" class="fixed inset-0 z-[70] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-add-plan')"></div><div class="bg-white w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 flex flex-col animate-slide-up pb-safe p-6"><h3 class="text-xl font-bold mb-4">Add to Planner</h3><input type="hidden" id="suggestion-index"><div class="space-y-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Date</label><input type="date" id="plan-date" class="ios-input"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Audience</label><select id="plan-audience" class="ios-input bg-white"><option value="Adults">Adults</option><option value="Finn">Finn</option><option value="All">Everyone</option></select></div><button id="btn-confirm-plan" onclick="app.confirmAddToPlanner()" class="w-full bg-blue-600 text-white h-12 rounded-xl font-bold mt-4">Add to Schedule</button></div></div></div>
+    
+    <!-- Family Member Modal -->
+    <div id="modal-family-member" class="fixed inset-0 z-[65] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-family-member')"></div><div class="bg-white w-full sm:w-[500px] sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 flex flex-col animate-slide-up pb-safe"><div class="p-4 border-b border-gray-100 flex justify-between items-center"><button onclick="app.closeModal('modal-family-member')" class="text-blue-500 text-[17px]">Cancel</button><h3 class="text-[17px] font-semibold text-black">Family Member</h3><button id="btn-save-family" onclick="app.saveFamilyMember()" class="text-blue-500 font-semibold text-[17px]">Save</button></div><div class="p-6 space-y-4"><input type="hidden" id="family-id"><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Name</label><input type="text" id="family-name" class="ios-input" placeholder="Name"></div><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Allergies</label><input type="text" id="family-allergies" class="ios-input" placeholder="e.g., Peanuts"></div><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Restrictions</label><input type="text" id="family-restrictions" class="ios-input" placeholder="e.g., No Soy"></div><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Dislikes</label><input type="text" id="family-dislikes" class="ios-input" placeholder="e.g., Corn"></div><button onclick="app.deleteFamilyMember()" id="btn-delete-family" class="w-full mt-4 py-3 text-red-500 text-[17px] bg-white border border-gray-200 rounded-xl hidden">Remove Member</button></div></div></div>
+
+    <!-- Recipe Edit Modal -->
+    <div id="modal-recipe" class="fixed inset-0 z-[70] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-recipe')"></div><div class="bg-white w-full sm:w-[600px] sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 flex flex-col h-[90vh] sm:h-[80vh] animate-slide-up"><div class="p-4 border-b border-gray-100 flex justify-between items-center"><button onclick="app.closeModal('modal-recipe')" class="text-blue-500 text-[17px]">Cancel</button><h3 class="text-[17px] font-semibold text-black" id="recipe-modal-title">Edit Recipe</h3><button id="btn-save-recipe" onclick="app.saveRecipe()" class="text-blue-500 font-semibold text-[17px]">Save</button></div><div class="flex-grow overflow-y-auto p-5 space-y-5"><form id="recipe-form" class="space-y-5"><input type="hidden" id="recipe-id"><div><input type="text" id="recipe-name" class="ios-input bg-transparent text-2xl font-bold placeholder-gray-300 p-0 border-b border-gray-200 rounded-none focus:bg-transparent" placeholder="Recipe Name" required></div><div class="flex justify-end"><button type="button" onclick="app.openTemplatesModal()" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">+ Use Template</button></div><div class="flex gap-4"><div class="flex-1"><label class="text-xs font-medium text-gray-500 uppercase ml-1">Prep</label><input type="number" id="recipe-prep" class="ios-input text-center" placeholder="0"></div><div class="flex-1"><label class="text-xs font-medium text-gray-500 uppercase ml-1">Cook</label><input type="number" id="recipe-cook" class="ios-input text-center" placeholder="0"></div><div class="flex-1"><label class="text-xs font-medium text-gray-500 uppercase ml-1">Rating</label><input type="number" id="recipe-rating" class="ios-input text-center" max="5" min="1" value="5"></div></div><div class="flex gap-4 items-end"><div class="flex-1"><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Audience</label><select id="recipe-audience" class="ios-input appearance-none bg-no-repeat bg-right pr-8" style="background-image: url('data:image/svg+xml,...')"><option value="Adults">Adults</option><option value="Finn">Finn (Kid)</option><option value="All">Everyone</option></select></div><button type="button" onclick="app.remixRecipe()" id="btn-remix-recipe" class="h-[44px] px-4 bg-purple-100 text-purple-700 rounded-xl font-medium text-sm flex items-center justify-center"><i data-lucide="sparkles" class="w-4 h-4 mr-1"></i> Remix</button></div><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-2 flex justify-between items-center">Ingredients<button type="button" onclick="app.addIngredientInput()" class="text-blue-500 text-[13px] font-semibold">+ Add</button></label><div id="ingredients-list" class="space-y-2"></div></div><div><label class="text-xs font-medium text-gray-500 uppercase ml-1 mb-1 block">Instructions</label><textarea id="recipe-instructions" rows="8" class="ios-input" placeholder="Step 1..."></textarea></div><div class="grid grid-cols-2 gap-3"><button type="button" onclick="app.duplicateRecipe()" id="btn-duplicate-recipe" class="w-full py-3 text-indigo-600 text-[17px] bg-indigo-50 rounded-xl font-semibold hidden">Duplicate</button><button type="button" onclick="app.deleteRecipe()" id="btn-delete-recipe" class="w-full py-3 text-red-500 text-[17px] bg-white border border-gray-200 rounded-xl hidden">Delete</button></div></form></div></div></div>
+
+    <!-- Cooking Mode Modal -->
+    <div id="modal-cooking" class="fixed inset-0 z-[70] hidden bg-[#F2F2F7] flex flex-col animate-slide-up"><div class="bg-white border-b border-gray-200 z-20 sticky top-0 shadow-sm"><div class="flex justify-between items-center p-4 pb-2 pt-safe-top"><button onclick="app.closeModal('modal-cooking')" class="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><i data-lucide="chevron-down" class="w-6 h-6 text-gray-600"></i></button><h2 class="text-[17px] font-semibold text-black truncate max-w-[200px] text-center" id="cooking-title">Cooking</h2><div id="voice-indicator" class="hidden items-center gap-2"><span class="text-[10px] font-bold text-red-500 uppercase">Listening</span><div class="w-3 h-3 bg-red-500 rounded-full mic-active"></div></div><div id="voice-placeholder" class="w-10" style="display:block"></div></div><div class="px-6 pb-4"><div class="flex justify-between text-[11px] font-bold text-gray-400 mb-1 uppercase tracking-wide"><span id="cooking-progress-text">Step 1 of ?</span><span id="cooking-progress-percent">0%</span></div><div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div id="cooking-progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out" style="width: 0%"></div></div></div></div><div class="flex-grow overflow-y-auto p-5 pb-32 relative" id="cooking-scroll-container"><div class="mb-8"><details class="group bg-white rounded-2xl border border-gray-200"><summary class="list-none cursor-pointer p-4 font-bold text-gray-700 flex justify-between items-center text-[17px]"><span>Ingredients Reference</span><i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform"></i></summary><div class="px-4 pb-4 pt-0"><ul id="cooking-ingredients" class="space-y-2 text-gray-600 text-[15px] border-t border-gray-100 pt-2"></ul></div></details></div><div id="cooking-steps" class="space-y-4"></div></div><div class="absolute bottom-10 left-0 right-0 px-6 flex justify-center pb-safe z-30"><button onclick="app.finishCooking()" class="w-full max-w-sm bg-green-500 text-white h-14 rounded-full font-bold shadow-xl active:scale-95 transition flex items-center justify-center text-[18px]"><i data-lucide="check-circle" class="w-6 h-6 mr-2"></i> Finish</button></div></div>
+
+    <!-- AI Create Modal -->
+    <div id="modal-ai-create" class="fixed inset-0 z-[60] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-ai-create')"></div><div class="bg-white w-full sm:w-[400px] rounded-t-2xl sm:rounded-2xl shadow-2xl transform transition-transform duration-300 p-6 animate-slide-up pb-safe"><div class="flex justify-between items-start mb-4"><div class="flex items-center text-purple-600"><i data-lucide="sparkles" class="w-6 h-6 mr-2"></i><h3 class="text-xl font-bold text-black">AI Chef</h3></div><button onclick="app.closeModal('modal-ai-create')" class="bg-gray-100 p-1 rounded-full text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button></div><p class="text-[15px] text-gray-600 mb-4">Describe the meal you want to create.</p><textarea id="ai-prompt" class="ios-input mb-4 h-32 resize-none" placeholder="e.g., A 15-minute pasta dish for kids with hidden veggies..."></textarea><button onclick="app.generateRecipe()" id="btn-ai-generate" class="w-full bg-purple-600 text-white h-12 rounded-xl font-bold text-[17px] active:opacity-80 transition">Generate Recipe</button></div></div>
+
+    <!-- Quick Plan Modal -->
+    <div id="modal-quick-plan" class="fixed inset-0 z-[60] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-quick-plan')"></div><div class="bg-white w-full sm:w-[500px] rounded-t-2xl sm:rounded-2xl shadow-2xl transform transition-transform duration-300 flex flex-col h-[85vh] animate-slide-up"><div class="p-4 border-b border-gray-100 flex justify-between items-center"><h3 class="text-[17px] font-bold">Quick Plan</h3><button id="btn-quick-plan-done" onclick="app.executeQuickPlan()" class="text-blue-500 font-semibold text-[17px]">Done</button></div><div class="flex-grow overflow-y-auto p-4 space-y-2" id="quick-plan-list"></div></div></div>
+    
+    <!-- Bulk Import Modal -->
+    <div id="bulk-import-modal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="bulk-import-title"><div class="flex items-center justify-center min-h-screen p-4"><div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity" onclick="app.closeModal('bulk-import-modal')"></div><div class="glass p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-xl transform transition-all relative"><button class="absolute top-4 right-4 text-gray-500 hover:text-gray-700" onclick="app.closeModal('bulk-import-modal')" aria-label="Close bulk import form"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button><h3 id="bulk-import-title" class="text-2xl font-bold mb-6 text-gray-900 flex items-center"><span class="lucide lucide-file-text w-6 h-6 mr-2 text-blue-500" aria-hidden="true"></span> Bulk Import Recipes</h3><p class="text-sm text-gray-600 mb-4">Paste multiple recipes below.</p><textarea id="bulk-import-textarea" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" rows="10" placeholder="Paste your recipes here..."></textarea><button type="button" id="bulk-import-parse-btn" class="btn w-full mt-4 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition shadow-md" aria-label="Parse and import recipes" onclick="app.handleBulkImport(document.getElementById('bulk-import-textarea').value)">Parse & Import</button></div></div></div>
+
+    <!-- Templates Modal -->
+    <div id="modal-templates" class="fixed inset-0 z-[75] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-templates')"></div><div class="bg-white w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 flex flex-col animate-slide-up pb-safe p-6"><h3 class="text-xl font-bold mb-4">Start from Template</h3><div class="grid grid-cols-1 gap-2"><button onclick="app.applyTemplate('quick')" class="p-3 border rounded-lg text-left hover:bg-gray-50">⚡️ Quick 15-Min Dinner</button><button onclick="app.applyTemplate('slow')" class="p-3 border rounded-lg text-left hover:bg-gray-50">🥘 Slow Cooker Meal</button><button onclick="app.applyTemplate('baking')" class="p-3 border rounded-lg text-left hover:bg-gray-50">🍰 Baking Project</button></div></div></div>
+    
+    <!-- Import Modal -->
+    <div id="modal-import" class="fixed inset-0 z-[70] hidden flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onclick="app.closeModal('modal-import')"></div><div class="bg-white w-full sm:w-[500px] sm:rounded-2xl rounded-t-2xl shadow-2xl transform transition-transform duration-300 flex flex-col animate-slide-up pb-safe p-6"><h3 class="text-xl font-bold mb-4">Import Recipe</h3><div class="space-y-4"><label class="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition"><div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i data-lucide="camera" class="w-6 h-6"></i></div><div class="flex-grow"><div class="font-bold">Scan Cookbook</div><div class="text-xs text-gray-500">Take a photo of a recipe</div></div><input type="file" accept="image/*" capture="environment" class="hidden" onchange="app.handleImageImport(this)"></label><div><label class="block text-sm font-medium text-gray-700 mb-1">Paste URL or Text</label><textarea id="import-text-input" class="ios-input h-32" placeholder="Paste recipe URL or full text here..."></textarea></div><button id="btn-run-import" onclick="app.handleSmartImport()" class="w-full bg-blue-600 text-white h-12 rounded-xl font-bold mt-2">Import</button></div></div></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, serverTimestamp, runTransaction, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDJKjVF-RfW0raelHy7cZv4jIv8nzGHFXI",
+            authDomain: "kitchai-lc.firebaseapp.com",
+            projectId: "kitchai-lc",
+            storageBucket: "kitchai-lc.appspot.com",
+            messagingSenderId: "937903472554",
+            appId: "1:937903472554:web:69263d693a7ccd5d26f5d3"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const apiKey = "AIzaSyDJKjVF-RfW0raelHy7cZv4jIv8nzGHFXI"; 
+        const appInstance = initializeApp(firebaseConfig);
+        const auth = getAuth(appInstance);
+        const db = getFirestore(appInstance);
+
+        const state = {
+            recipes: [], mealPlan: [], familyMembers: [], suggestions: [], pantry: [], storeLayout: [], chatHistory: [],
+            view: 'planner', weekOffset: 0, userId: null, cookingMealId: null, detailRecipeId: null, currentScale: 1,
+            viewsRendered: { planner: false, recipes: false, shopping: false, family: false, suggestions: false, 'ai-chat': false },
+            cooking: { stepIndex: 0, recognition: null, isListening: false, wakeLock: null },
+            chatConfig: { ttsEnabled: true, isListening: false, recognition: null }
+        };
+        
+        const DEFAULT_STORE_LAYOUT = ["Produce", "Bakery", "Meat", "Dairy", "Frozen", "Pantry", "Other"];
+
+        window.onerror = (msg, url, line) => { console.error("Global Error:", msg, url, line); document.getElementById('modal-error-boundary').classList.remove('hidden'); return false; };
+        window.addEventListener('unhandledrejection', (event) => { console.error("Unhandled Rejection:", event.reason); document.getElementById('modal-error-boundary').classList.remove('hidden'); });
+
+        const debounce = (func, delay) => { let timeoutId; return (...args) => { clearTimeout(timeoutId); timeoutId = setTimeout(() => func.apply(this, args), delay); }; };
+
+        const uiHelpers = {
+             setLoading: (btnId, isLoading, text = 'Loading...') => {
+                const btn = document.getElementById(btnId);
+                if (!btn) return;
+                if (isLoading) {
+                    if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerText;
+                    btn.disabled = true;
+                    btn.innerHTML = `<div class="loading-spinner inline-block mr-2"></div> ${text}`;
+                } else {
+                    btn.disabled = false;
+                    btn.innerText = btn.dataset.originalText || 'Save';
+                }
+             },
+             showToast: (msg) => {
+                 const container = document.getElementById('toast-container');
+                 const toast = document.createElement('div');
+                 toast.className = 'toast';
+                 toast.innerText = msg;
+                 container.appendChild(toast);
+                 setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+             },
+             updateIcons: (container) => { if (container) { lucide.createIcons({ root: container }); } else { lucide.createIcons(); } }
+        };
+
+        const helpers = {
+            getMonday: (d) => { d = new Date(d); const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1); const m = new Date(d.setDate(diff)); m.setHours(0,0,0,0); return m; },
+            formatDateKey: (d) => d.toISOString().split('T')[0],
+            checkCompatibility: (r) => {
+                const w = []; const sf = []; const txt = JSON.stringify(r.ingredients_json || []).toLowerCase();
+                state.familyMembers.forEach(m => {
+                    let safe = true;
+                    (m.allergies||[]).forEach(a => { if(txt.includes(a.toLowerCase())) { w.push({type:'allergy', member:m.name, item:a}); safe=false; } });
+                    if(safe) {
+                        (m.dislikes||[]).forEach(d => { if(txt.includes(d.toLowerCase())) w.push({type:'dislike', member:m.name, item:d}); });
+                        (m.restrictions||[]).forEach(r => { if(txt.includes(r.toLowerCase())) w.push({type:'restriction', member:m.name, item:r}); });
+                    }
+                    if(safe) sf.push(m.name);
+                });
+                return { warnings: w, safeFor: sf };
+            },
+            retryOperation: async (fn, retries=3) => { try { return await fn(); } catch(e) { if(retries===0) throw e; await new Promise(r=>setTimeout(r,1000)); return helpers.retryOperation(fn, retries-1); } },
+            fileToBase64: (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result.split(',')[1]); reader.onerror = error => reject(error); }),
+            speakText: (text) => { if (!state.chatConfig.ttsEnabled || !window.speechSynthesis) return; window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); window.speechSynthesis.speak(utterance); }
+        };
+
+        const logic = {
+            init: async () => {
+                try {
+                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (token) {
+                        await signInWithCustomToken(auth, token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            state.userId = user.uid;
+                            document.getElementById('connection-status').className = "w-2 h-2 rounded-full bg-green-500";
+                            logic.startListeners();
+                            logic.cleanupTemporaryRecipes();
+                        }
+                    });
+                } catch (error) {
+                    console.error("Auth Failed:", error);
+                    if (error.code === 'auth/identity-toolkit-api-has-not-been-used-in-project-before-or-it-is-disabled') {
+                        alert("Authentication is disabled for this project. Please enable 'Anonymous' sign-in in the Firebase Console.");
+                    } else {
+                        uiHelpers.showToast("Offline Mode: Authentication failed.");
+                    }
+                    // Render UI anyway so it's not blank
+                    ui.renderCurrentView();
+                }
+                
+                window.addEventListener('online', () => document.getElementById('offline-banner').classList.remove('visible'));
+                window.addEventListener('offline', () => document.getElementById('offline-banner').classList.add('visible'));
+                const searchInput = document.getElementById('recipe-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', debounce((e) => { document.getElementById('search-loading').classList.add('hidden'); app.renderRecipes(); }, 300));
+                    searchInput.addEventListener('keydown', () => { document.getElementById('search-loading').classList.remove('hidden'); });
+                }
+            },
+            startListeners: () => {
+                 onSnapshot(collection(db, `artifacts/${appId}/public/data/recipes`), (s) => { state.recipes = s.docs.map(d=>({id:d.id,...d.data()})); if (state.view === 'recipes') ui.renderRecipes(); });
+                 onSnapshot(collection(db, `artifacts/${appId}/public/data/meal_plan`), (s) => { state.mealPlan = s.docs.map(d=>({id:d.id,...d.data()})); if(state.view==='planner'||state.view==='shopping') ui.renderCurrentView(); });
+                 onSnapshot(collection(db, `artifacts/${appId}/public/data/family_members`), (s) => { state.familyMembers = s.docs.map(d=>({id:d.id,...d.data()})); if(state.view==='family') ui.renderFamily(); });
+                 onSnapshot(doc(db, `artifacts/${appId}/public/data/settings/config`), (d) => { if(d.exists()) { const data = d.data(); state.pantry = data.pantry || []; state.storeLayout = data.storeLayout || DEFAULT_STORE_LAYOUT; } else { setDoc(doc(db, `artifacts/${appId}/public/data/settings/config`), { pantry: ["Salt", "Pepper", "Olive Oil", "Rice"], storeLayout: DEFAULT_STORE_LAYOUT }); } if(state.view==='family') ui.renderFamily(); if(state.view==='shopping') ui.renderShopping(); });
+                 onSnapshot(query(collection(db, `artifacts/${appId}/public/data/conversations`), where("timestamp", ">", new Date(Date.now() - 86400000))), (s) => {
+                    const msgs = s.docs.map(d => d.data()).sort((a, b) => a.timestamp - b.timestamp);
+                    state.chatHistory = msgs;
+                    if (state.view === 'ai-chat') ui.renderChat();
+                 });
+            },
+            cleanupTemporaryRecipes: async () => {
+                const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const q = query(collection(db, `artifacts/${appId}/public/data/recipes`), where("addedToBook", "==", false));
+                const snapshot = await getDocs(q);
+                const toDelete = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.createdAt) {
+                        const createdAt = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+                        if (createdAt < thirtyDaysAgo) toDelete.push(doc.ref);
+                    }
+                });
+                if (toDelete.length > 0 && confirm(`Delete ${toDelete.length} old temporary recipes?`)) {
+                    await Promise.all(toDelete.map(ref => deleteDoc(ref)));
+                }
+            },
+            callGemini: async (prompt, schema=null) => { return helpers.retryOperation(async () => {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const body = { contents: [{ parts: [{ text: prompt }] }] };
+                if(schema) body.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
+                const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                if(!r.ok) throw new Error(r.status);
+                const d = await r.json(); return d.candidates[0].content.parts[0].text;
+            }); },
+            callGeminiVision: async (prompt, base64Image) => {
+                return helpers.retryOperation(async () => {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    const body = {
+                        contents: [{
+                            role: "user",
+                            parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: base64Image } }]
+                        }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    };
+                    const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                    if(!r.ok) throw new Error("Vision API Failed");
+                    const d = await r.json(); return d.candidates[0].content.parts[0].text;
+                });
+            }
+        };
+
+        const ui = {
+            renderCurrentView: () => {
+                document.querySelectorAll('.nav-btn').forEach(b => { const active = b.dataset.target === state.view; if(active){b.classList.remove('text-gray-400');b.classList.add('text-blue-500')}else{b.classList.remove('text-blue-500');b.classList.add('text-gray-400')} });
+                ['planner', 'recipes', 'shopping', 'ai-chat', 'family', 'suggestions'].forEach(v => document.getElementById(`view-${v}`).classList.toggle('hidden', state.view !== v));
+                if(state.view === 'shopping') ui.renderShopping();
+                if(state.view === 'family') ui.renderFamily();
+                if(state.view === 'planner') ui.renderPlanner();
+                if(state.view === 'recipes') ui.renderRecipes();
+                if(state.view === 'ai-chat') ui.renderChat();
+                lucide.createIcons();
+            },
+            renderPlanner: () => {
+                 const grid = document.getElementById('planner-grid'); grid.innerHTML = ''; ui.renderTodayHero();
+                 const startOfWeek = helpers.getMonday(new Date()); startOfWeek.setDate(startOfWeek.getDate() + (state.weekOffset * 7)); const todayKey = helpers.formatDateKey(new Date());
+                 for (let i = 0; i < 7; i++) { const currentDay = new Date(startOfWeek); currentDay.setDate(startOfWeek.getDate() + i); const dateKey = helpers.formatDateKey(currentDay); const isToday = dateKey === todayKey; const dayCard = document.createElement('div'); dayCard.className = `ios-card p-4 ${isToday ? 'today-card' : ''}`; if (isToday) dayCard.id = "planner-card-today"; 
+                    dayCard.innerHTML = `<div class="flex justify-between items-center mb-3"><div><h3 class="font-bold text-[17px] text-black">${currentDay.toLocaleDateString('en-US', {weekday:'long'})}</h3><p class="text-[13px] text-gray-500">${currentDay.toLocaleDateString('en-US', {month:'short', day:'numeric'})}</p></div>${isToday ? '<span class="today-badge">TODAY</span>' : ''}</div><div class="space-y-3">${ui.renderSlot(dateKey, 'Adults')}${ui.renderSlot(dateKey, 'Finn')}</div>`;
+                    grid.appendChild(dayCard);
+                 }
+                 uiHelpers.updateIcons(grid);
+            },
+            renderSlot: (dateKey, audience) => {
+                  const meal = state.mealPlan.find(m => m.date_planned === dateKey && m.audience === audience);
+                  let content = `<div class="relative"><select onchange="app.planMeal(this, '${dateKey}', '${audience}')" class="w-full text-[15px] text-blue-500 font-medium bg-white border border-dashed border-gray-300 rounded-xl p-2.5 appearance-none text-center"><option value="">+ Add</option><option value="EVENT:Takeaway">🥡 Takeaway</option><optgroup label="Recipes">${state.recipes.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}</optgroup></select></div>`;
+                  if(meal) {
+                      const recipe = state.recipes.find(r => r.id === meal.recipe_id); const name = meal.event ? meal.event : (recipe ? recipe.name : 'Unknown');
+                      content = `<div class="bg-[#F2F2F7] p-3 rounded-xl flex justify-between"><span class="text-[15px] font-medium truncate">${name}</span><button onclick="app.deleteMeal('${meal.id}')"><i data-lucide="x" class="w-4 h-4 text-gray-400"></i></button></div>`;
+                  }
+                  return `<div><div class="flex items-center gap-1 mb-1 ml-1"><i data-lucide="${audience==='Finn'?'baby':'chef-hat'}" class="w-3 h-3 text-gray-400"></i><span class="text-[11px] font-bold text-gray-400 uppercase">${audience}</span></div>${content}</div>`;
+            },
+             renderTodayHero: () => {
+                 const container = document.getElementById('planner-today-section');
+                 const today = new Date();
+                 const dateKey = helpers.formatDateKey(today);
+                 const adultMeal = state.mealPlan.find(m => m.date_planned === dateKey && m.audience === 'Adults');
+                 const finnMeal = state.mealPlan.find(m => m.date_planned === dateKey && m.audience === 'Finn');
+                 const getMealText = (meal) => { 
+                     if(!meal) return 'Not planned'; 
+                     if(meal.event) return meal.event; 
+                     const r = state.recipes.find(x => x.id === meal.recipe_id); 
+                     return r ? r.name : 'Unknown'; 
+                 };
+                 container.innerHTML = `
+                    <div class="p-6 pb-20 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                        <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl -ml-6 -mb-6"></div>
+                        <h4 class="text-white/80 uppercase tracking-wider text-xs font-bold mb-1">Today is</h4>
+                        <h2 class="text-3xl font-bold text-white mb-1">${today.toLocaleDateString('en-US', { weekday: 'long' })}</h2>
+                        <p class="text-white/90 text-sm font-medium mb-6">${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                        <div class="grid grid-cols-1 gap-3 relative z-10">
+                            <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div class="flex items-center gap-2 mb-1"><i data-lucide="chef-hat" class="w-4 h-4 text-white/70"></i><span class="text-xs font-bold text-white/70 uppercase">Luke & Hannah</span></div>
+                                <p class="text-white font-medium truncate">${getMealText(adultMeal)}</p>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10">
+                                <div class="flex items-center gap-2 mb-1"><i data-lucide="baby" class="w-4 h-4 text-white/70"></i><span class="text-xs font-bold text-white/70 uppercase">Finn</span></div>
+                                <p class="text-white font-medium truncate">${getMealText(finnMeal)}</p>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-0 left-0 w-full bg-black/20 backdrop-blur-lg p-3 flex justify-around items-center border-t border-white/10">
+                            <button onclick="app.openQuickPlan()" class="text-white text-xs font-medium flex flex-col items-center gap-1 opacity-90 hover:opacity-100"><div class="bg-white/20 p-2 rounded-full"><i data-lucide="coffee" class="w-4 h-4"></i></div>Add Breakfast</button>
+                            <button onclick="app.openQuickPlan()" class="text-white text-xs font-medium flex flex-col items-center gap-1 opacity-90 hover:opacity-100"><div class="bg-white/20 p-2 rounded-full"><i data-lucide="sandwich" class="w-4 h-4"></i></div>Add Lunch</button>
+                            <button onclick="app.scrollToToday()" class="text-white text-xs font-medium flex flex-col items-center gap-1 opacity-90 hover:opacity-100"><div class="bg-white/20 p-2 rounded-full"><i data-lucide="utensils" class="w-4 h-4"></i></div>Add Dinner</button>
+                        </div>
+                    </div>`; 
+                 uiHelpers.updateIcons(container);
+            },
+            renderRecipeDetail: (r) => {
+                const container = document.getElementById('detail-content');
+                const { warnings } = helpers.checkCompatibility(r);
+                const scale = state.currentScale;
+                const scaledServings = Math.round(r.servings * scale);
+                
+                const groups = {};
+                (r.ingredients_json || []).forEach(i => {
+                    const g = i.component || 'Main';
+                    if(!groups[g]) groups[g] = [];
+                    groups[g].push(i);
+                });
+
+                const colors = { 'Base': 'bg-gray-50 border-gray-200', 'Marinade': 'bg-amber-50 border-amber-200', 'Finish': 'bg-green-50 border-green-200' };
+
+                const ingredientsHtml = Object.keys(groups).map(g => {
+                    let key = g;
+                    if (g.toLowerCase().includes('base') || g.toLowerCase().includes('main')) key = 'Base';
+                    if (g.toLowerCase().includes('marinade') || g.toLowerCase().includes('seasoning')) key = 'Marinade';
+                    if (g.toLowerCase().includes('finish') || g.toLowerCase().includes('garnish')) key = 'Finish';
+                    const colorClass = colors[key] || 'bg-blue-50 border-blue-200'; 
+                    return `<div class="mb-6"><h4 class="text-xs font-bold text-gray-400 uppercase mb-2 ml-1 tracking-wider">${g}</h4><div class="${colorClass} rounded-2xl border overflow-hidden">${groups[g].map(i => { const originalQty = i.quantity; const scaledQty = originalQty * scale; const qtyDisplay = parseFloat(scaledQty.toFixed(2)); const isChanged = scale !== 1; const qtyClass = isChanged ? "text-blue-600 font-bold" : "text-gray-600 font-bold"; return `<div class="p-3 border-b border-gray-200/50 last:border-0 flex justify-between items-center"><span class="text-gray-800 font-medium">${i.name}</span><span class="font-mono text-sm bg-white/60 px-2 py-1 rounded ${qtyClass}">${qtyDisplay} ${i.unit}</span></div>`}).join('')}</div></div>`;
+                }).join('');
+
+                const getStepIcon = (text) => {
+                    const t = text.toLowerCase();
+                    if(t.includes('bake') || t.includes('fry') || t.includes('cook') || t.includes('boil')) return '🔥';
+                    if(t.includes('wait') || t.includes('rest') || t.includes('cool') || t.includes('marinate')) return '⏰';
+                    if(t.includes('preheat') || t.includes('heat')) return '🌡️';
+                    if(t.includes('chop') || t.includes('slice') || t.includes('mix')) return '🔪';
+                    return '👨‍🍳';
+                }
+
+                const stepsHtml = r.instructions.split('\n').map((s, i) => {
+                    if(!s.trim()) return '';
+                    const icon = getStepIcon(s);
+                    return `<div class="relative bg-white p-5 rounded-2xl shadow-sm border border-gray-100 mb-6 ml-2 active:scale-[0.99] transition-transform cursor-pointer"><div class="absolute -left-3 -top-3 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-lg border-2 border-white">${i+1}</div><div class="flex justify-between items-start mb-2"><span class="text-xs font-bold text-indigo-500 uppercase tracking-wide">Step ${i+1}</span><span class="text-lg">${icon}</span></div><p class="text-[16px] text-gray-800 leading-relaxed font-medium">${s}</p></div>`;
+                }).join('');
+
+                const equipmentHtml = r.equipment && r.equipment.length ? `<div class="bg-slate-800 text-white rounded-2xl p-5 mb-8 shadow-lg relative overflow-hidden"><div class="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-8 -mt-8"></div><h4 class="font-bold flex items-center gap-2 mb-3 text-lg"><i data-lucide="wrench" class="w-5 h-5"></i> Equipment Needed</h4><div class="flex flex-wrap gap-2">${r.equipment.map(e => `<span class="bg-white/20 px-3 py-1 rounded-lg text-sm font-medium backdrop-blur-sm">${e}</span>`).join('')}</div></div>` : '';
+                const notesHtml = r.tips && r.tips.length ? `<div class="bg-yellow-50 rounded-2xl border border-yellow-100 p-5 mb-6"><h4 class="font-bold text-yellow-800 flex items-center gap-2 mb-3 text-lg"><i data-lucide="lightbulb" class="w-5 h-5"></i> Chef's Tips</h4><ul class="space-y-3">${r.tips.map(t => `<li class="flex gap-3 text-yellow-900 text-sm leading-relaxed"><span class="text-yellow-500 font-bold">•</span>${t}</li>`).join('')}</ul></div>` : '';
+                const storageHtml = r.storage ? `<div class="bg-blue-50 rounded-2xl border border-blue-100 p-5 mb-24"><h4 class="font-bold text-blue-800 flex items-center gap-2 mb-2"><i data-lucide="snowflake" class="w-5 h-5"></i> Storage & Leftovers</h4><p class="text-sm text-blue-900 leading-relaxed">${r.storage}</p></div>` : '';
+                const scaleOptions = [0.5, 1, 1.5, 2, 3].map(val => `<option value="${val}" ${state.currentScale === val ? 'selected' : ''}>${val}x</option>`).join('');
+
+                container.innerHTML = `
+                    <div class="p-6 pt-2">
+                        <h2 class="text-3xl font-bold text-gray-900 leading-tight mb-2">${r.name}</h2>
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <div class="detail-pill"><i data-lucide="clock" class="w-3 h-3 mr-1"></i> ${r.prep_time_minutes + r.cook_time_minutes}m</div>
+                            <div class="detail-pill bg-blue-50 text-blue-700"><i data-lucide="users" class="w-3 h-3 mr-1"></i> ${scaledServings} ppl</div>
+                            <div class="detail-pill bg-indigo-50 text-indigo-600">${r.cuisine_tag}</div>
+                            ${warnings.length > 0 ? `<div class="detail-pill bg-red-100 text-red-600">⚠️ ${warnings.length} Conflict(s)</div>` : '<div class="detail-pill bg-green-100 text-green-600">✅ Family Safe</div>'}
+                        </div>
+                        <div class="flex gap-3 overflow-x-auto pb-2 mb-6 -mx-6 px-6">
+                             <div class="bg-white border border-gray-100 rounded-xl p-3 min-w-[100px] shadow-sm"><div class="text-xs text-gray-400 uppercase font-bold">Calories</div><div class="text-lg font-bold text-gray-800">450</div></div>
+                             <div class="bg-white border border-gray-100 rounded-xl p-3 min-w-[100px] shadow-sm"><div class="text-xs text-gray-400 uppercase font-bold">Protein</div><div class="text-lg font-bold text-gray-800">28g</div></div>
+                             <div class="bg-white border border-gray-100 rounded-xl p-3 min-w-[100px] shadow-sm"><div class="text-xs text-gray-400 uppercase font-bold">Carbs</div><div class="text-lg font-bold text-gray-800">42g</div></div>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-gray-900">Ingredients <span class="text-sm font-normal text-gray-500">(${r.ingredients_json.length})</span></h3>
+                            <div class="flex items-center gap-2">
+                                ${state.currentScale !== 1 ? `<button onclick="app.setScale(1)" class="text-xs text-red-500 font-bold px-2">Reset</button>` : ''}
+                                <div class="relative"><select onchange="app.setScale(parseFloat(this.value))" class="bg-blue-50 text-blue-600 text-sm font-bold px-3 py-1 rounded-lg appearance-none pr-8 outline-none">${scaleOptions}</select><i data-lucide="chevron-down" class="w-4 h-4 text-blue-600 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"></i></div>
+                            </div>
+                        </div>
+                        ${ingredientsHtml}
+                        ${equipmentHtml}
+                        <h3 class="text-xl font-bold mb-4 mt-8 text-gray-900">Instructions</h3>
+                        <div class="space-y-4">${stepsHtml}</div>
+                        <div class="mt-8">${notesHtml}${storageHtml}</div>
+                    </div>
+                `;
+                
+                const btn = document.getElementById('btn-detail-plan');
+                btn.onclick = () => { 
+                    const today = helpers.formatDateKey(new Date());
+                    const payload = { date_planned: today, audience: 'All', status: 'Planned', recipe_id: r.id, servings: scaledServings, event: null };
+                    addDoc(collection(db, `artifacts/${appId}/public/data/meal_plan`), payload);
+                    app.closeModal('modal-recipe-detail');
+                    app.setView('planner');
+                    app.scrollToToday();
+                    uiHelpers.showToast(`Added to today's plan for ${scaledServings} people!`);
+                };
+                uiHelpers.updateIcons(container);
+             },
+            renderRecipes: () => {
+                const container = document.getElementById('recipes-grid');
+                const searchTerm = document.getElementById('recipe-search').value.toLowerCase();
+                const showTemp = document.getElementById('toggle-temp-recipes').checked;
+                const filtered = state.recipes.filter(r => {
+                    const matchesSearch = r.name.toLowerCase().includes(searchTerm);
+                    const isTemp = r.addedToBook === false;
+                    return matchesSearch && (showTemp ? isTemp : !isTemp);
+                });
+                container.innerHTML = filtered.map(r => {
+                    const { warnings } = helpers.checkCompatibility(r);
+                    const hasWarnings = warnings.length > 0;
+                    let warningHtml = hasWarnings ? `<div class="mt-2 flex flex-wrap gap-1">` + warnings.slice(0,2).map(w => `<span class="text-[10px] px-1.5 py-0.5 rounded ${w.type === 'allergy' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} font-bold">⚠️ ${w.member}: ${w.item}</span>`).join('') + `</div>` : `<div class="mt-2 text-[11px] text-green-600 font-medium flex items-center"><i data-lucide="check" class="w-3 h-3 mr-1"></i> Safe for everyone</div>`;
+                    return `<div class="ios-card p-4 active:scale-95 transition-transform duration-150 cursor-pointer group relative" onclick="app.openRecipeDetail('${r.id}')"><div class="flex justify-between items-start mb-1"><h3 class="font-bold text-[17px] text-black leading-tight line-clamp-2">${r.name}</h3><span class="text-yellow-500 font-bold text-xs bg-yellow-50 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">★ ${r.household_rating}</span></div><div class="text-[13px] text-gray-500 flex gap-2"><span>${r.prep_time_minutes + r.cook_time_minutes}m</span><span>•</span><span>${r.audience_tag}</span></div>${warningHtml}<button onclick="event.stopPropagation(); app.editRecipe('${r.id}')" class="absolute top-2 right-12 p-1.5 bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-100"><i data-lucide="edit-2" class="w-4 h-4 text-blue-600"></i></button></div>`
+                }).join('');
+                if(filtered.length === 0) container.innerHTML = `<div class="col-span-full text-center text-gray-400 py-10">No recipes found</div>`;
+                uiHelpers.updateIcons(container);
+            },
+            renderFamily: () => {
+                const container = document.getElementById('family-grid');
+                container.innerHTML = state.familyMembers.map(m => {
+                    const allergies = (m.allergies || []).map(t => `<span class="text-[11px] px-2 py-0.5 rounded-full tag-allergy border">${t}</span>`).join('');
+                    const restrictions = (m.restrictions || []).map(t => `<span class="text-[11px] px-2 py-0.5 rounded-full tag-restriction border">${t}</span>`).join('');
+                    const dislikes = (m.dislikes || []).map(t => `<span class="text-[11px] px-2 py-0.5 rounded-full tag-dislike border">${t}</span>`).join('');
+                    return `<div onclick="app.editFamilyMember('${m.id}')" class="ios-card p-4 flex items-center justify-between active:scale-95 transition-transform cursor-pointer"><div><h3 class="font-bold text-[17px] text-black mb-2">${m.name}</h3><div class="flex flex-wrap gap-1">${allergies}${restrictions}${dislikes}${(m.allergies?.length + m.restrictions?.length + m.dislikes?.length) === 0 ? '<span class="text-gray-400 text-sm italic">No restrictions</span>' : ''}</div></div><i data-lucide="chevron-right" class="text-gray-300 w-5 h-5"></i></div>`
+                }).join('');
+                // Pantry
+                const pantryList = document.getElementById('pantry-staples-list');
+                pantryList.innerHTML = state.pantry.map(item => `<span class="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-sm font-medium flex items-center">${item} <button onclick="app.removeStaple('${item}')" class="ml-2 text-orange-400 hover:text-orange-900">×</button></span>`).join('');
+                // Store Layout
+                const layoutList = document.getElementById('store-layout-list');
+                layoutList.innerHTML = state.storeLayout.map(cat => `<li class="bg-white border border-gray-200 p-3 rounded-lg flex justify-between items-center cursor-move" data-id="${cat}"><span class="font-medium text-gray-700">${cat}</span><i data-lucide="grip-vertical" class="text-gray-400 w-4 h-4"></i></li>`).join('');
+                if(!state.sortable && layoutList) { state.sortable = new Sortable(layoutList, { animation: 150, onEnd: () => { const newOrder = Array.from(layoutList.children).map(li => li.dataset.id); updateDoc(doc(db, `artifacts/${appId}/public/data/settings/config`), { storeLayout: newOrder }); } }); }
+                uiHelpers.updateIcons(container);
+            },
+            renderShopping: async () => {
+                const container = document.getElementById('shopping-list-container');
+                const startOfWeek = helpers.getMonday(new Date());
+                if (state.weekOffset === 1) startOfWeek.setDate(startOfWeek.getDate() + 7);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(endOfWeek.getDate() + 7);
+                const relevantMeals = state.mealPlan.filter(m => { const d = new Date(m.date_planned); return d >= startOfWeek && d < endOfWeek && m.status !== 'Cooked' && !m.event; });
+                if (relevantMeals.length === 0) { container.innerHTML = `<div class="text-center text-gray-400">No meals planned for ${state.weekOffset === 0 ? 'this' : 'next'} week.</div>`; return; }
+                const list = {};
+                relevantMeals.forEach(meal => {
+                    const recipe = state.recipes.find(r => r.id === meal.recipe_id);
+                    if (!recipe || !recipe.ingredients_json) return;
+                    const scale = (meal.servings || 4) / (recipe.servings || 4);
+                    recipe.ingredients_json.forEach(ing => {
+                        const key = ing.name.toLowerCase().trim();
+                        if (!list[key]) list[key] = { name: ing.name, qty: 0, unit: ing.unit };
+                        list[key].qty += (ing.quantity * scale);
+                    });
+                });
+                const flatList = Object.values(list);
+                const itemNames = flatList.map(i => `${i.name} (${i.qty.toFixed(1)} ${i.unit})`).join(', ');
+                container.innerHTML = `<div class="animate-pulse text-center text-gray-500">Categorizing...</div>`;
+                const prompt = `Categorize these grocery items into JSON: {"Produce": [], "Meat": [], "Pantry": [], "Dairy": [], "Other": []}. Items: ${itemNames}`;
+                const aiJson = await logic.callGemini(prompt, { type: "OBJECT", properties: { "Produce": {type: "ARRAY", items: {type: "STRING"}}, "Meat": {type: "ARRAY", items: {type: "STRING"}}, "Pantry": {type: "ARRAY", items: {type: "STRING"}}, "Dairy": {type: "ARRAY", items: {type: "STRING"}}, "Other": {type: "ARRAY", items: {type: "STRING"}} } });
+                if (!aiJson) { container.innerHTML = flatList.map(i => `<div class="py-3 border-b border-gray-100 flex items-center"><input type="checkbox" class="w-5 h-5 rounded-full border-gray-300 text-blue-500 mr-3"><span class="text-[17px]">${i.name} ${i.qty} ${i.unit}</span></div>`).join(''); return; }
+                const categories = JSON.parse(aiJson);
+                let html = '';
+                for (const [cat, items] of Object.entries(categories)) { if (items.length > 0) { html += `<div class="mb-4"><h3 class="font-bold text-gray-400 text-[13px] uppercase tracking-wide mb-1">${cat}</h3><div class="bg-[#F2F2F7] rounded-xl overflow-hidden">` + items.map(i => `<label class="flex items-center p-3 border-b border-white last:border-b-0 active:bg-gray-200 transition"><input type="checkbox" class="w-5 h-5 rounded-full border-gray-300 text-blue-500 focus:ring-0 mr-3 peer"><span class="text-[17px] text-black peer-checked:line-through peer-checked:text-gray-400">${i}</span></label>`).join('') + `</div></div>`; } }
+                container.innerHTML = html;
+                uiHelpers.updateIcons(container);
+            },
+             renderSuggestions: () => {
+                 const container = document.getElementById('suggestions-grid');
+                 container.innerHTML = state.suggestions.map((r, index) => `<div class="ios-card p-4"><h3 class="font-bold">${r.name}</h3><button onclick="app.addSuggestionToPlanner(${index})" class="bg-blue-500 text-white px-4 py-2 rounded mt-2">Plan</button></div>`).join('');
+                 uiHelpers.updateIcons(container);
+            },
+            renderChat: () => {
+                 const container = document.getElementById('chat-history'); if(!container) return;
+                 container.innerHTML = state.chatHistory.map(msg => {
+                     const isUser = msg.role === 'user';
+                     let content = `<p>${marked.parseInline(msg.text)}</p>`;
+                     if(msg.actions && msg.actions.length > 0) {
+                        content += `<div class="flex flex-col gap-2 mt-3">`;
+                        msg.actions.forEach(action => {
+                            const actionJson = JSON.stringify(action).replace(/"/g, '&quot;');
+                            if (action.type === 'plan_meal') {
+                                content += `<button onclick="app.handleAiAction(${actionJson})" class="chat-action-card p-3 flex items-center text-left active:bg-gray-50"><div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3 text-blue-600"><i data-lucide="calendar-plus" class="w-5 h-5"></i></div><div><div class="font-bold text-sm text-blue-700">Add to Plan</div><div class="text-xs text-gray-500">${action.label}</div></div></button>`;
+                            } else if (action.type === 'view_recipe') {
+                                content += `<button onclick="app.handleAiAction(${actionJson})" class="chat-action-card p-3 flex items-center text-left active:bg-gray-50"><div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3 text-green-600"><i data-lucide="book-open" class="w-5 h-5"></i></div><div><div class="font-bold text-sm text-green-700">View Recipe</div><div class="text-xs text-gray-500">${action.label}</div></div></button>`;
+                            }
+                        });
+                        content += `</div>`;
+                     }
+                     return `
+                    <div class="flex gap-3 ${isUser ? 'justify-end' : ''}">
+                        ${!isUser ? `<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0"><i data-lucide="chef-hat" class="w-4 h-4 text-indigo-600"></i></div>` : ''}
+                        <div class="${isUser ? 'chat-bubble-user' : 'chat-bubble-ai'} p-3 text-[16px] shadow-sm max-w-[85%]">
+                            ${content}
+                        </div>
+                    </div>`;
+                 }).join('');
+                 container.scrollTop = container.scrollHeight;
+                 uiHelpers.updateIcons(container);
+                 
+                 if (state.chatHistory.length === 0) {
+                     document.getElementById('chat-starters').classList.remove('hidden');
+                 } else {
+                     document.getElementById('chat-starters').classList.add('hidden');
+                 }
+            }
+        };
+
+        // --- Global Functions ---
+        window.app = {
+            setView: (v) => { state.view = v; ui.renderCurrentView(); },
+            setWeekOffset: (o) => { state.weekOffset = o; ui.renderPlanner(); },
+            scrollToToday: () => { state.weekOffset = 0; ui.renderPlanner(); setTimeout(() => { document.getElementById('planner-card-today')?.scrollIntoView({behavior:'smooth', block:'center'}); }, 100); },
+            
+            // 1. Plan Meal
+            planMeal: async (s, d, a) => {
+                try {
+                    if(!s.value) return;
+                    const isE = s.value.startsWith("EVENT:");
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/meal_plan`), { date_planned: d, audience: a, status: 'Planned', recipe_id: isE ? null : s.value, event: isE ? s.value.split(':')[1].replace('_', ' ') : null, servings: 4 });
+                    s.value = "";
+                    uiHelpers.showToast("Meal Planned!");
+                } catch(e) { console.error(e); uiHelpers.showToast("Error planning meal"); }
+            },
+            // 2. Delete Meal
+            deleteMeal: async (id) => { 
+                if(confirm('Remove?')) { 
+                    try { await deleteDoc(doc(db, `artifacts/${appId}/public/data/meal_plan`, id)); uiHelpers.showToast("Meal Removed"); } 
+                    catch(e) { console.error(e); uiHelpers.showToast("Error deleting meal"); }
+                } 
+            },
+            // 3. Generate Suggestions
+            generateAiSuggestions: async () => {
+                const btnId = 'btn-gen-ideas';
+                uiHelpers.setLoading(btnId, true, "Thinking...");
+                const prompt = `Suggest 5 unique family meals (exclude: ${state.recipes.map(r=>r.name).join(',')}). Return JSON array: {name, instructions, prep_time_minutes, cook_time_minutes, household_rating:4, servings:4, audience_tag:"All", ingredients_json:[{name, quantity, unit, component}], equipment:[string], tips:[string], storage:string}`;
+                try {
+                    const json = await logic.callGemini(prompt, {type: "ARRAY", items: {type:"OBJECT", properties:{name:{type:"STRING"}, instructions:{type:"STRING"}, prep_time_minutes:{type:"INTEGER"}, cook_time_minutes:{type:"INTEGER"}, household_rating:{type:"INTEGER"}, servings:{type:"INTEGER"}, audience_tag:{type:"STRING"}, ingredients_json:{type:"ARRAY", items:{type:"OBJECT", properties:{name:{type:"STRING"}, quantity:{type:"NUMBER"}, unit:{type:"STRING"}, component:{type:"STRING"}}}}, equipment:{type:"ARRAY", items:{type:"STRING"}}, tips:{type:"ARRAY", items:{type:"STRING"}}, storage:{type:"STRING"} }}});
+                    if(json) { state.suggestions = JSON.parse(json); ui.renderSuggestions(); }
+                } catch (e) { uiHelpers.showToast("Failed to generate"); }
+                uiHelpers.setLoading(btnId, false, "Generate 5");
+            },
+            // 4. Confirm Add
+            confirmAddToPlanner: async () => {
+                const btnId = 'btn-confirm-plan';
+                uiHelpers.setLoading(btnId, true, "Scheduling...");
+                const date = document.getElementById('plan-date').value;
+                const audience = document.getElementById('plan-audience').value;
+                const recipeId = document.getElementById('suggestion-index').value; // This ID is from a temp doc created in addSuggestionToPlanner
+                if(!date) { uiHelpers.showToast("Pick a date"); uiHelpers.setLoading(btnId, false); return; }
+                try {
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/meal_plan`), { date_planned: date, audience: audience, status: 'Planned', recipe_id: recipeId, servings: 4 });
+                    app.closeModal('modal-add-plan');
+                    app.setView('planner');
+                    uiHelpers.showToast("Added to schedule");
+                } catch(e) { uiHelpers.showToast("Error adding to plan"); }
+                uiHelpers.setLoading(btnId, false);
+            },
+            // 5. Save Family
+            saveFamilyMember: async () => {
+                const btnId = 'btn-save-family';
+                uiHelpers.setLoading(btnId, true, "Saving...");
+                const id = document.getElementById('family-id').value;
+                const payload = { name: document.getElementById('family-name').value, allergies: document.getElementById('family-allergies').value.split(',').map(s=>s.trim()).filter(s=>s), restrictions: document.getElementById('family-restrictions').value.split(',').map(s=>s.trim()).filter(s=>s), dislikes: document.getElementById('family-dislikes').value.split(',').map(s=>s.trim()).filter(s=>s) };
+                try {
+                    if(id) await updateDoc(doc(db, `artifacts/${appId}/public/data/family_members`, id), payload);
+                    else await addDoc(collection(db, `artifacts/${appId}/public/data/family_members`), payload);
+                    app.closeModal('modal-family-member');
+                    uiHelpers.showToast("Member saved");
+                } catch(e) { uiHelpers.showToast("Error saving member"); }
+                uiHelpers.setLoading(btnId, false);
+            },
+            // 6. Delete Family
+            deleteFamilyMember: async () => {
+                const id = document.getElementById('family-id').value;
+                if(confirm("Delete member?")) { 
+                    try { await deleteDoc(doc(db, `artifacts/${appId}/public/data/family_members`, id)); app.closeModal('modal-family-member'); uiHelpers.showToast("Member removed"); }
+                    catch(e) { uiHelpers.showToast("Error removing member"); }
+                }
+            },
+            // 7. Save Recipe
+            saveRecipe: async () => {
+                const btnId = 'btn-save-recipe';
+                uiHelpers.setLoading(btnId, true, "Saving...");
+                const id = document.getElementById('recipe-id').value;
+                const name = document.getElementById('recipe-name').value;
+                if (!name) { uiHelpers.showToast("Name required"); uiHelpers.setLoading(btnId, false); return; }
+                const ings = [];
+                document.getElementById('ingredients-list').querySelectorAll('div').forEach(d => { const i = d.querySelectorAll('input'); if(i[0].value) ings.push({name: i[0].value, quantity: Number(i[1].value), unit: i[2].value}); });
+                if(ings.length===0) { uiHelpers.showToast("Add ingredients"); uiHelpers.setLoading(btnId, false); return; }
+                
+                const payload = { name: name, prep_time_minutes: Number(document.getElementById('recipe-prep').value), cook_time_minutes: Number(document.getElementById('recipe-cook').value), household_rating: Number(document.getElementById('recipe-rating').value), servings: 4, audience_tag: document.getElementById('recipe-audience').value, instructions: document.getElementById('recipe-instructions').value, ingredients_json: ings, addedToBook: true };
+                try {
+                    if(id) await updateDoc(doc(db, `artifacts/${appId}/public/data/recipes`, id), payload); else await addDoc(collection(db, `artifacts/${appId}/public/data/recipes`), payload);
+                    app.closeModal('modal-recipe');
+                    uiHelpers.showToast("Recipe saved");
+                } catch(e) { uiHelpers.showToast("Error saving recipe"); }
+                uiHelpers.setLoading(btnId, false);
+            },
+            // 8. Delete Recipe
+            deleteRecipe: async () => { 
+                const id = document.getElementById('recipe-id').value; 
+                if(confirm('Delete?')) { 
+                    try { await deleteDoc(doc(db, `artifacts/${appId}/public/data/recipes`, id)); app.closeModal('modal-recipe'); uiHelpers.showToast("Recipe deleted"); }
+                    catch(e) { uiHelpers.showToast("Error deleting recipe"); }
+                } 
+            },
+            // 9. Duplicate Recipe
+            duplicateRecipe: () => {
+                document.getElementById('recipe-id').value = ""; 
+                document.getElementById('recipe-name').value += " (Copy)";
+                uiHelpers.showToast("Duplicated! Save to finish.");
+            },
+            // 10. Remix Recipe
+            remixRecipe: async () => {
+                const btnId = 'btn-remix-recipe'; uiHelpers.setLoading(btnId, true, "Remixing...");
+                const name = document.getElementById('recipe-name').value; const inst = document.getElementById('recipe-instructions').value; 
+                const mod = prompt("How to remix?");
+                if(!mod) { uiHelpers.setLoading(btnId, false); return; }
+                try {
+                    const json = await logic.callGemini(`Remix recipe "${name}". Modification: ${mod}. Inst: ${inst}. JSON: {name, instructions, ingredients_json:[{name,quantity,unit}]}`, {type: "OBJECT", properties: {name:{type:"STRING"}, instructions:{type:"STRING"}, ingredients_json:{type:"ARRAY", items:{type:"OBJECT", properties:{name:{type:"STRING"}, quantity:{type:"NUMBER"}, unit:{type:"STRING"}}}}} });
+                    if(json) { const d = JSON.parse(json); document.getElementById('recipe-name').value = d.name; document.getElementById('recipe-instructions').value = d.instructions; const list = document.getElementById('ingredients-list'); list.innerHTML = ""; d.ingredients_json.forEach(i => app.addIngredientInput(i)); uiHelpers.showToast("Remixed!"); }
+                } catch(e) { uiHelpers.showToast("Remix failed"); }
+                uiHelpers.setLoading(btnId, false, "Remix");
+            },
+            // 11. Generate Recipe
+            generateRecipe: async () => {
+                const btnId = 'btn-ai-generate'; uiHelpers.setLoading(btnId, true, "Generating...");
+                const txt = document.getElementById('ai-prompt').value;
+                try {
+                    const json = await logic.callGemini(`Recipe JSON for: ${txt}. Schema: {name, instructions, prep_time_minutes:number, cook_time_minutes:number, household_rating:4, servings:4, audience_tag:"All", ingredients_json:[{name, quantity, number, unit}]}`);
+                    if(json) { await addDoc(collection(db, `artifacts/${appId}/public/data/recipes`), {...JSON.parse(json), addedToBook: true}); app.closeModal('modal-ai-create'); uiHelpers.showToast("Recipe Generated!"); }
+                } catch(e) { uiHelpers.showToast("Generation failed"); }
+                uiHelpers.setLoading(btnId, false, "Generate Recipe");
+            },
+            // 12. Finish Cooking
+            finishCooking: async () => {
+                try {
+                    if(state.cookingMealId) await updateDoc(doc(db, `artifacts/${appId}/public/data/meal_plan`, state.cookingMealId), { status: 'Cooked' });
+                    document.getElementById('modal-cooking').classList.add('hidden');
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    uiHelpers.showToast("Great Job! Meal Cooked.");
+                } catch(e) { uiHelpers.showToast("Error updating status"); }
+            },
+            
+            // Helpers
+            openRecipeDetail: (id) => { state.detailRecipeId = id; const r = state.recipes.find(x => x.id === id); ui.renderRecipeDetail(r); document.getElementById('modal-recipe-detail').classList.remove('hidden'); },
+            closeModal: (id) => document.getElementById(id).classList.add('hidden'),
+            addIngredientInput: (d = {name:'', quantity:'', unit:''}) => { const el = document.createElement('div'); el.className = "flex gap-2 mb-2"; el.innerHTML = `<input class="ios-input flex-grow" placeholder="Item" value="${d.name}"><input type="number" class="ios-input w-16 text-center" placeholder="1" value="${d.quantity}"><input class="ios-input w-16 text-center" placeholder="unit" value="${d.unit}"><button type="button" onclick="this.parentElement.remove()" class="text-red-500 ml-1">x</button>`; document.getElementById('ingredients-list').appendChild(el); },
+            addSuggestionToPlanner: async (idx) => {
+                try {
+                    const recipe = {...state.suggestions[idx], addedToBook: false, createdAt: new Date()};
+                    const docRef = await addDoc(collection(db, `artifacts/${appId}/public/data/recipes`), recipe);
+                    document.getElementById('suggestion-index').value = docRef.id; 
+                    document.getElementById('modal-add-plan').classList.remove('hidden');
+                } catch(e) { uiHelpers.showToast("Error prepping suggestion"); }
+            },
+            saveSuggestionToBook: async (idx) => {
+                 try {
+                    const recipe = {...state.suggestions[idx], addedToBook: true, createdAt: new Date()};
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/recipes`), recipe);
+                    state.suggestions.splice(idx, 1);
+                    ui.renderSuggestions();
+                    uiHelpers.showToast("Saved to Recipe Book!");
+                 } catch(e) { uiHelpers.showToast("Error saving"); }
+            },
+            openImportModal: () => document.getElementById('modal-import').classList.remove('hidden'),
+            openTemplatesModal: () => document.getElementById('modal-templates').classList.remove('hidden'),
+            applyTemplate: (type) => {
+                // Simple template logic
+                const t = { name: "Quick Meal", prep: 10, cook: 15, inst: "1. Prep\n2. Cook" }; // stub
+                document.getElementById('recipe-name').value = t.name;
+                document.getElementById('recipe-prep').value = t.prep;
+                document.getElementById('recipe-cook').value = t.cook;
+                document.getElementById('recipe-instructions').value = t.inst;
+                app.closeModal('modal-templates');
+            },
+            handleSmartImport: async () => {
+                 const btnId = 'btn-run-import'; uiHelpers.setLoading(btnId, true, "Importing...");
+                 const txt = document.getElementById('import-text-input').value;
+                 try {
+                     const json = await logic.callGemini(`Extract recipe from: ${txt}. JSON Schema: {name, instructions, prep_time_minutes:number, cook_time_minutes:number, household_rating:4, servings:4, audience_tag:"All", ingredients_json:[{name, quantity, number, unit}]}`);
+                     if(json) { await addDoc(collection(db, `artifacts/${appId}/public/data/recipes`), {...JSON.parse(json), addedToBook: true}); app.closeModal('modal-import'); uiHelpers.showToast("Imported!"); }
+                 } catch(e) { uiHelpers.showToast("Import failed"); }
+                 uiHelpers.setLoading(btnId, false, "Import");
+            },
+            handleImageImport: async (input) => {
+                if (input.files && input.files[0]) {
+                    uiHelpers.showToast("Scanning...");
+                    try {
+                        const base64 = await helpers.fileToBase64(input.files[0]);
+                        const json = await logic.callGeminiVision("Extract recipe JSON: {name, instructions, prep_time_minutes:number, cook_time_minutes:number, servings:number, ingredients_json:[{name, quantity:number, unit}]}", base64);
+                        const r = JSON.parse(json);
+                        // Populate form
+                        document.getElementById('recipe-name').value = r.name;
+                        document.getElementById('recipe-instructions').value = r.instructions;
+                        document.getElementById('ingredients-list').innerHTML = "";
+                        r.ingredients_json.forEach(i => app.addIngredientInput(i));
+                        app.closeModal('modal-import');
+                        document.getElementById('modal-recipe').classList.remove('hidden');
+                    } catch(e) { uiHelpers.showToast("Scan failed"); }
+                    input.value = '';
+                }
+            },
+            exportRecipePDF: () => {
+                 const { jsPDF } = window.jspdf; const doc = new jsPDF(); 
+                 doc.text("Recipe Export", 10, 10); doc.save("recipe.pdf"); 
+            },
+            toggleEditMode: () => {
+                const id = state.detailRecipeId;
+                if(id) { app.closeModal('modal-recipe-detail'); app.editRecipe(id); }
+            },
+            openQuickPlan: () => { document.getElementById('modal-quick-plan').classList.remove('hidden'); /* populate list */ },
+            executeQuickPlan: async () => { /* ... */ app.closeModal('modal-quick-plan'); },
+            copyShoppingList: () => { /* ... */ },
+            clearCheckedItems: () => { /* ... */ },
+            aiSuggestMeals: () => { app.setView('suggestions'); },
+            markCooked: async (id) => await updateDoc(doc(db, `artifacts/${appId}/public/data/meal_plan`, id), { status: 'Cooked' }),
+            toggleChatMic: () => { /* ... */ },
+            toggleChatVoice: () => { /* ... */ },
+            addStaple: () => {
+                const val = document.getElementById('new-staple').value;
+                if(val) {
+                    const newList = [...state.pantry, val];
+                    updateDoc(doc(db, `artifacts/${appId}/public/data/settings/config`), { pantry: newList });
+                    document.getElementById('new-staple').value = "";
+                }
+            },
+            removeStaple: (val) => {
+                const newList = state.pantry.filter(i => i !== val);
+                updateDoc(doc(db, `artifacts/${appId}/public/data/settings/config`), { pantry: newList });
+            },
+            estimatePrice: async () => {
+                if(!state.currentShoppingList) return;
+                const btn = document.getElementById('btn-estimate-price');
+                btn.innerText = "Estimating...";
+                const items = Object.values(state.currentShoppingList).map(i => `${i.qty} ${i.unit} ${i.name}`).join(', ');
+                const res = await logic.callGemini(`Estimate the total cost in USD for these grocery items: ${items}. Return only the dollar amount range like "$40-50".`);
+                document.getElementById('price-estimate-display').innerText = `Est. Total: ${res}`;
+                document.getElementById('price-estimate-display').classList.remove('hidden');
+                btn.innerHTML = `<i data-lucide="dollar-sign" class="w-3 h-3 mr-1"></i> Estimate`;
+            },
+            shareShoppingList: () => {
+                const items = Object.values(state.currentShoppingList || {}).map(i => `- [ ] ${i.qty} ${i.unit} ${i.name}`).join('\n');
+                if (navigator.share) {
+                    navigator.share({ title: 'Shopping List', text: items });
+                } else {
+                    navigator.clipboard.writeText(items);
+                    alert("List copied to clipboard!");
+                }
+            },
+            printShoppingList: () => window.print(),
+            toggleVoiceShopping: () => {
+                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!Recognition) return alert("Voice not supported in this browser.");
+                
+                const btn = document.getElementById('btn-voice-shop');
+                
+                if (state.isVoiceShopping) {
+                    state.voiceShopRec.stop();
+                    state.isVoiceShopping = false;
+                    btn.classList.remove('bg-red-100', 'text-red-600');
+                    btn.classList.add('bg-blue-50', 'text-blue-600');
+                    btn.innerHTML = `<i data-lucide="mic" class="w-5 h-5"></i> Check off items`;
+                } else {
+                    const rec = new Recognition();
+                    rec.lang = 'en-US';
+                    rec.continuous = true;
+                    rec.onstart = () => {
+                        btn.classList.remove('bg-blue-50', 'text-blue-600');
+                        btn.classList.add('bg-red-100', 'text-red-600', 'mic-active');
+                        btn.innerHTML = `<i data-lucide="mic-off" class="w-5 h-5"></i> Listening...`;
+                    };
+                    rec.onresult = (e) => {
+                        const transcript = e.results[e.results.length-1][0].transcript.toLowerCase();
+                        console.log("Heard:", transcript);
+                        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                        checkboxes.forEach(cb => {
+                            const label = cb.nextElementSibling.querySelector('span').innerText.toLowerCase();
+                            if (transcript.includes(label) || transcript.includes("check " + label)) {
+                                cb.checked = true;
+                            }
+                        });
+                    };
+                    rec.start();
+                    state.voiceShopRec = rec;
+                    state.isVoiceShopping = true;
+                }
+                lucide.createIcons();
+            },
+            setScale: (scale) => {
+                state.currentScale = scale;
+                const openDetail = document.querySelector('#modal-recipe-detail:not(.hidden)');
+                const recipeId = document.getElementById('modal-recipe-detail').dataset.recipeId;
+                if(recipeId) {
+                    const r = state.recipes.find(x => x.id === recipeId);
+                    ui.renderRecipeDetail(r); 
+                }
+            },
+            // New: Chat Action System
+            handleChatStarter: (text) => {
+                document.getElementById('chat-input').value = text;
+                app.handleChatSubmit({ preventDefault: () => {} }); // Simulate submit
+            },
+            handleAiAction: async (action) => {
+                const { type, payload } = action;
+                if (type === 'plan_meal') {
+                    const r = state.recipes.find(x => x.id === payload.recipeId);
+                    if(!r) return uiHelpers.showToast("Recipe not found");
+                    uiHelpers.showToast("Adding to planner...");
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/meal_plan`), {
+                        date_planned: payload.date, audience: payload.audience || 'All', status: 'Planned', recipe_id: payload.recipeId, servings: 4
+                    });
+                    uiHelpers.showToast("Meal Planned!");
+                    app.setView('planner');
+                } else if (type === 'view_recipe') {
+                    app.openRecipeDetail(payload.recipeId);
+                } else if (type === 'create_recipe') {
+                     app.openAiRecipeModal();
+                     document.getElementById('ai-prompt').value = payload.prompt || "";
+                } else if (type === 'view_shopping_list') {
+                    app.setView('shopping');
+                }
+            },
+            // ... (Updated handleChatSubmit included in logic) ...
+            handleChatSubmit: async (e) => {
+                e.preventDefault(); 
+                const inp = document.getElementById('chat-input'); 
+                const text = inp.value.trim(); 
+                if(!text) return; 
+                inp.value = "";
+                
+                // 1. Save User Msg
+                await addDoc(collection(db, `artifacts/${appId}/public/data/conversations`), { role: 'user', text: text, timestamp: Date.now() });
+                
+                // 2. Build Context
+                const today = new Date();
+                const context = {
+                    currentDate: today.toDateString(),
+                    dayOfWeek: today.toLocaleDateString('en-US', { weekday: 'long' }),
+                    family: state.familyMembers.map(m => `${m.name} (Allergies: ${m.allergies.join(',')}, Dislikes: ${m.dislikes.join(',')})`).join('; '),
+                    pantry: state.pantry,
+                    recipes: state.recipes.map(r => ({ id: r.id, name: r.name })),
+                    plannedMeals: state.mealPlan.map(m => {
+                         const r = state.recipes.find(x => x.id === m.recipe_id);
+                         return `${m.date_planned}: ${m.audience} -> ${r ? r.name : m.event}`;
+                    }),
+                    recentChat: state.chatHistory.slice(-5).map(m => `${m.role}: ${m.text}`).join('\n')
+                };
+
+                const systemPrompt = `
+                Role: You are KitchAI, a smart family cooking assistant.
+                Current Context:
+                - Date: ${context.currentDate} (${context.dayOfWeek})
+                - Family: ${JSON.stringify(context.family)}
+                - Pantry: ${JSON.stringify(context.pantry)}
+                - Existing Recipes: ${JSON.stringify(context.recipes)}
+                - Planned Meals: ${JSON.stringify(context.plannedMeals)}
+                - Recent History: ${context.recentChat}
+
+                User Query: "${text}"
+
+                Instructions:
+                1. Answer helpful, concise, and friendly.
+                2. If the user wants to perform an action, include an "actions" array in your JSON response.
+                3. Use ISO dates (YYYY-MM-DD) for any planning actions. Calculate dates based on "Current Date".
+
+                Allowed Actions:
+                - plan_meal: { type: "plan_meal", label: "Plan [Recipe] for [Day]", payload: { date: "YYYY-MM-DD", recipeId: "ID", audience: "All" (or Adults/Finn) } }
+                - view_recipe: { type: "view_recipe", label: "View [Recipe]", payload: { recipeId: "ID" } }
+                - create_recipe: { type: "create_recipe", label: "Create new recipe", payload: { prompt: "Description of recipe to create" } }
+                - view_shopping_list: { type: "view_shopping_list", label: "Go to Shopping List", payload: {} }
+
+                Response Format (Strict JSON):
+                {
+                    "text": "Natural language response...",
+                    "actions": [] 
+                }
+                `;
+
+                try {
+                    const rawRes = await logic.callGemini(systemPrompt);
+                    const jsonStr = rawRes.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const aiData = JSON.parse(jsonStr);
+                    
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/conversations`), { 
+                        role: 'ai', 
+                        text: aiData.text, 
+                        actions: aiData.actions || [], 
+                        timestamp: Date.now() 
+                    });
+                    
+                    helpers.speakText(aiData.text);
+                    
+                } catch (err) {
+                    console.error("AI Parse Fail", err);
+                    await addDoc(collection(db, `artifacts/${appId}/public/data/conversations`), { role: 'ai', text: "I'm sorry, I had trouble processing that specific request.", timestamp: Date.now() });
+                }
+            }
+        };
+
+        logic.init();
+        
+        window.addEventListener('scroll', () => {
+            const todaySection = document.getElementById('planner-today-section'); const btnJump = document.getElementById('btn-jump-today');
+            if (todaySection && btnJump) { const rect = todaySection.getBoundingClientRect(); if (rect.bottom < 0) { btnJump.classList.remove('hidden'); } else { btnJump.classList.add('hidden'); } }
+        });
+
+    </script>
+</body>
+</html>
